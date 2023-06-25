@@ -6,6 +6,9 @@
 //! when all remaining cells in the grid have been filled out according to the
 //! games rules.
 
+use std::fmt::Display;
+use std::str::FromStr;
+
 /// The storage value for a cell on the Suduko grid.
 ///
 /// For cells with set values, this is [`Some`]. If the cell is empty, this value
@@ -63,5 +66,88 @@ impl Suduko for Standard {
 
     fn cells_mut(&mut self) -> &mut [Cell] {
         &mut self.cells
+    }
+}
+
+impl Display for Standard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            &self
+                .cells
+                .iter()
+                .map(|c| match c {
+                    Some(digit) => ('0' as u8 + *digit) as char,
+                    None => ' ',
+                })
+                .collect::<String>(),
+        )
+    }
+}
+
+impl FromStr for Standard {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let v = s
+            .chars()
+            .into_iter()
+            .filter_map(|c| match c {
+                // 1 to 9 become Some(1..9), ' ' becomes None
+                '1'..='9' | ' ' => Some(c.to_digit(10).map(|d| d as u8)),
+                _ => None,
+            })
+            .collect::<Vec<Cell>>();
+
+        let mut cells = [None; 9 * 9];
+        if v.len() != cells.len() {
+            return Err("invalid length");
+        }
+
+        cells.copy_from_slice(&v[..]);
+
+        Ok(Self { cells })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standard_parse_str() {
+        let suduko = Standard::from_str(
+            "   357891
+35    7  
+      5  
+  5 4    
+ 7 98  5 
+  35 62 8
+  8    72
+   42 18 
+ 92 18   ",
+        );
+
+        assert!(suduko.is_ok());
+        let suduko = suduko.unwrap();
+
+        assert_eq!(suduko.get(0), None);
+        assert_eq!(suduko.get(3), Some(3));
+        assert_eq!(suduko.get(10), Some(5));
+
+        let suduko = Standard::from_str(
+            "   35789135    7        5    5 4     7 98  5   35 62 8  8    72   42 18  92 18   ",
+        );
+
+        assert!(suduko.is_ok());
+        let suduko = suduko.unwrap();
+
+        assert_eq!(suduko.get(0), None);
+        assert_eq!(suduko.get(3), Some(3));
+        assert_eq!(suduko.get(10), Some(5));
+
+        assert_eq!(
+            suduko.to_string(),
+            "   35789135    7        5    5 4     7 98  5   35 62 8  8    72   42 18  92 18   ",
+        )
     }
 }
