@@ -25,6 +25,27 @@ pub trait Suduko {
     fn cells(&self) -> &[Cell];
     /// Get a mutable refrence to all the cells on the grid.
     fn cells_mut(&mut self) -> &mut [Cell];
+
+    /// Get all the rows.
+    fn rows(&self) -> Vec<Vec<Cell>>;
+    /// Get all the columns.
+    fn columns(&self) -> Vec<Vec<Cell>>;
+    /// Get all the subgrids.
+    fn grids(&self) -> Vec<Vec<Cell>>;
+
+    /// Get all groups a cell is part of.
+    fn groups_of(&self, i: usize) -> Vec<Vec<Cell>>;
+
+    /// Get all cell groups.
+    ///
+    /// This includes [`Self::rows`], [`Self::columns`] and [`Self::grids`].
+    fn groups(&self) -> Vec<Vec<Cell>> {
+        let mut v = Vec::new();
+        v.append(&mut self.rows());
+        v.append(&mut self.columns());
+        v.append(&mut self.grids());
+        v
+    }
 }
 
 /// Standard game of Suduko.
@@ -42,6 +63,20 @@ impl Standard {
         Self {
             cells: [None; 9 * 9],
         }
+    }
+
+    fn grid(&self, i: usize) -> Vec<Cell> {
+        let row = i / 3;
+        let col = i % 3;
+
+        self.cells
+            .chunks_exact(3)
+            .skip(row * 9 + col)
+            .step_by(3)
+            .take(3)
+            .flatten()
+            .copied()
+            .collect()
     }
 }
 
@@ -66,6 +101,45 @@ impl Suduko for Standard {
 
     fn cells_mut(&mut self) -> &mut [Cell] {
         &mut self.cells
+    }
+
+    fn rows(&self) -> Vec<Vec<Cell>> {
+        self.cells
+            .chunks_exact(9)
+            .map(|c| c.into_iter().copied().collect::<Vec<_>>())
+            .collect()
+    }
+
+    fn columns(&self) -> Vec<Vec<Cell>> {
+        [
+            self.cells.into_iter().skip(0).step_by(9).collect(),
+            self.cells.into_iter().skip(1).step_by(9).collect(),
+            self.cells.into_iter().skip(2).step_by(9).collect(),
+            self.cells.into_iter().skip(3).step_by(9).collect(),
+            self.cells.into_iter().skip(4).step_by(9).collect(),
+            self.cells.into_iter().skip(5).step_by(9).collect(),
+            self.cells.into_iter().skip(6).step_by(9).collect(),
+            self.cells.into_iter().skip(7).step_by(9).collect(),
+            self.cells.into_iter().skip(8).step_by(9).collect(),
+        ]
+        .into()
+    }
+
+    fn grids(&self) -> Vec<Vec<Cell>> {
+        (0..9).map(|i| self.grid(i)).collect()
+    }
+
+    fn groups_of(&self, i: usize) -> Vec<Vec<Cell>> {
+        let row = i / 9;
+        let col = i % 9;
+        let group = (row / 3) + (col / 3);
+
+        [
+            self.cells.into_iter().skip(row * 9).take(9).collect(),
+            self.cells.into_iter().skip(col).step_by(9).collect(),
+            self.grid(group),
+        ]
+        .into()
     }
 }
 
@@ -148,6 +222,58 @@ mod tests {
         assert_eq!(
             suduko.to_string(),
             "   35789135    7        5    5 4     7 98  5   35 62 8  8    72   42 18  92 18   ",
+        )
+    }
+
+    #[test]
+    fn groups() {
+        let suduko = Standard::from_str(
+            "1234567892        3        4        5        6        7        8        987654321",
+        )
+        .unwrap();
+
+        assert_eq!(
+            suduko.rows()[0],
+            (1..=9).map(|i| Some(i)).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            suduko.rows()[8],
+            (1..=9).rev().map(|i| Some(i)).collect::<Vec<_>>()
+        );
+
+        assert_eq!(
+            suduko.columns()[0],
+            (1..=9).map(|i| Some(i)).collect::<Vec<_>>()
+        );
+
+        assert_eq!(
+            suduko.grids()[0],
+            Vec::from([
+                Some(1),
+                Some(2),
+                Some(3),
+                Some(2),
+                None,
+                None,
+                Some(3),
+                None,
+                None
+            ])
+        );
+
+        assert_eq!(
+            suduko.grids()[8],
+            Vec::from([
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(3),
+                Some(2),
+                Some(1),
+            ])
         )
     }
 }
