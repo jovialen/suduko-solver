@@ -46,6 +46,22 @@ pub trait Suduko {
         v.append(&mut self.grids());
         v
     }
+
+    /// Check if all cells in the suduko has been filled.
+    fn filled(&self) -> bool {
+        self.cells().iter().all(|c| c.is_some())
+    }
+
+    /// Check if the suduko has been solved.
+    fn solved(&self) -> bool {
+        let groups = self.groups();
+        groups.into_iter().all(|mut group| {
+            // Check that both all cells in group are set and that there are no
+            // repeating values.
+            group.sort();
+            group[0] != None && group.windows(2).all(|w| w[0] != w[1])
+        })
+    }
 }
 
 /// Standard game of Suduko.
@@ -275,5 +291,29 @@ mod tests {
                 Some(1),
             ])
         )
+    }
+
+    #[test]
+    fn solve() {
+        let suduko = Standard::from_str(
+            "827154396965327148341689752593468271472513689618972435786235914154796823239841567",
+        )
+        .unwrap();
+        assert!(suduko.filled());
+        assert!(suduko.solved());
+
+        let suduko = Standard::from_str(
+            "227154396965327148341689752593468271472513689618972435786235914154796823239841567",
+        )
+        .unwrap();
+        assert!(suduko.filled());
+        assert!(!suduko.solved());
+
+        let suduko = Standard::from_str(
+            " 27154396965327148341689752593468271472513689618972435786235914154796823239841567",
+        )
+        .unwrap();
+        assert!(!suduko.filled());
+        assert!(!suduko.solved());
     }
 }
