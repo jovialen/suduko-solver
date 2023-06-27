@@ -1,15 +1,11 @@
 //! Suduko solver
 
-mod suduko;
-
 use std::str::FromStr;
-use suduko::{Standard, Suduko};
+use suduko_solver::variants::MiniSudoku;
+use suduko_solver::{Standard, Suduko};
 
 fn main() {
-    let mut game = Standard::from_str(
-        "  3  7  2  15  79  9      4        9 1   436   5 8    3  4           2   6   317 ",
-    )
-    .unwrap();
+    let mut game = MiniSudoku::from_str("  5 642645 1  3 4  561 3 4 3 66    2").unwrap();
 
     let result = game.solve();
     println!("{result:?}");
