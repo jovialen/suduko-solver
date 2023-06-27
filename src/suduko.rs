@@ -6,7 +6,7 @@
 //! when all remaining cells in the grid have been filled out according to the
 //! games rules.
 
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use std::fmt::Display;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
@@ -106,11 +106,10 @@ fn backtrack(suduko: &mut impl Suduko, pos: usize) -> Result<(), &'static str> {
         return backtrack(suduko, pos + 1);
     }
 
-    let illegal = HashSet::<Cell>::from_iter(suduko.groups_of(pos).into_iter().flatten());
+    let illegal = FxHashSet::from_iter(suduko.groups_of(pos).into_iter().flatten());
     let possible = suduko
         .cell_values()
-        .filter(|&value| !illegal.contains(&Some(value)))
-        .collect::<Vec<_>>();
+        .filter(|&value| !illegal.contains(&Some(value)));
 
     for value in possible {
         suduko.set(pos, Some(value));
