@@ -3,18 +3,15 @@
 mod suduko;
 
 use std::str::FromStr;
-use suduko::Standard;
+use suduko::{Standard, Suduko};
 
 fn main() {
-    let _game = Standard::from_str(
-        "   357891
-35    7  
-      5  
-  5 4    
- 7 98  5 
-  35 62 8
-  8    72
-   42 18 
- 92 18   ",
-    );
+    let mut game = Standard::from_str(
+        "  3  7  2  15  79  9      4        9 1   436   5 8    3  4           2   6   317 ",
+    )
+    .unwrap();
+
+    let result = game.solve();
+    println!("{result:?}");
+    println!("{game}");
 }

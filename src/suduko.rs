@@ -6,7 +6,9 @@
 //! when all remaining cells in the grid have been filled out according to the
 //! games rules.
 
+use std::collections::HashSet;
 use std::fmt::Display;
+use std::ops::RangeInclusive;
 use std::str::FromStr;
 
 /// The storage value for a cell on the Suduko grid.
@@ -16,15 +18,27 @@ use std::str::FromStr;
 pub type Cell = Option<u8>;
 
 /// A game of suduko.
-pub trait Suduko {
+pub trait Suduko: Sized + Display {
     /// Get the number on a cell on the grid.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `i` is not within the bounds of the suduko.
     fn get(&self, i: usize) -> Cell;
     /// Set the number on a cell on the grid, or clear it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `i` is not within the bounds of the suduko or if `num` is not
+    /// one of [`Self::cell_values`].
     fn set(&mut self, i: usize, num: Cell);
     /// Get all the cells on the grid.
     fn cells(&self) -> &[Cell];
     /// Get a mutable refrence to all the cells on the grid.
     fn cells_mut(&mut self) -> &mut [Cell];
+
+    /// Get all possible valid values for the cells.
+    fn cell_values(&mut self) -> RangeInclusive<u8>;
 
     /// Get all the rows.
     fn rows(&self) -> Vec<Vec<Cell>>;
@@ -52,6 +66,16 @@ pub trait Suduko {
         self.cells().iter().all(|c| c.is_some())
     }
 
+    /// Check if all currently set cells are legal.
+    fn legal(&self) -> bool {
+        let groups = self.groups();
+        groups.into_iter().all(|mut group| {
+            // Check that all cells in group that are set are unique.
+            group.sort();
+            group.windows(2).all(|w| w[0] != w[1] || w[0].is_none())
+        })
+    }
+
     /// Check if the suduko has been solved.
     fn solved(&self) -> bool {
         let groups = self.groups();
@@ -62,6 +86,42 @@ pub trait Suduko {
             group[0] != None && group.windows(2).all(|w| w[0] != w[1])
         })
     }
+
+    /// Solve the suduko
+    fn solve(&mut self) -> Result<(), &'static str> {
+        backtrack(self, 0)
+    }
+}
+
+fn backtrack(suduko: &mut impl Suduko, pos: usize) -> Result<(), &'static str> {
+    if !suduko.legal() {
+        return Err("cannot solve illegal position");
+    }
+
+    if pos >= suduko.cells().len() {
+        return Ok(());
+    }
+
+    if suduko.get(pos).is_some() {
+        return backtrack(suduko, pos + 1);
+    }
+
+    let illegal = HashSet::<Cell>::from_iter(suduko.groups_of(pos).into_iter().flatten());
+    let possible = suduko
+        .cell_values()
+        .filter(|&value| !illegal.contains(&Some(value)))
+        .collect::<Vec<_>>();
+
+    for value in possible {
+        suduko.set(pos, Some(value));
+        if let Ok(_) = backtrack(suduko, pos + 1) {
+            return Ok(());
+        }
+    }
+
+    suduko.set(pos, None);
+
+    Err("suduko cannot be solved")
 }
 
 /// Standard game of Suduko.
@@ -108,6 +168,12 @@ impl Suduko for Standard {
     }
 
     fn set(&mut self, i: usize, num: Cell) {
+        if let Some(num) = num {
+            if !self.cell_values().contains(&num) {
+                panic!("{num} is not a valid value for this cell");
+            }
+        }
+
         self.cells[i] = num;
     }
 
@@ -117,6 +183,10 @@ impl Suduko for Standard {
 
     fn cells_mut(&mut self) -> &mut [Cell] {
         &mut self.cells
+    }
+
+    fn cell_values(&mut self) -> RangeInclusive<u8> {
+        1..=9
     }
 
     fn rows(&self) -> Vec<Vec<Cell>> {
@@ -148,7 +218,7 @@ impl Suduko for Standard {
     fn groups_of(&self, i: usize) -> Vec<Vec<Cell>> {
         let row = i / 9;
         let col = i % 9;
-        let group = (row / 3) + (col / 3);
+        let group = (row / 3) * 3 + (col / 3);
 
         [
             self.cells.into_iter().skip(row * 9).take(9).collect(),
