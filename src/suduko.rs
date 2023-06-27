@@ -364,7 +364,7 @@ mod tests {
     }
 
     #[test]
-    fn solve() {
+    fn validation() {
         let suduko = Standard::from_str(
             "827154396965327148341689752593468271472513689618972435786235914154796823239841567",
         )
@@ -385,5 +385,18 @@ mod tests {
         .unwrap();
         assert!(!suduko.filled());
         assert!(!suduko.solved());
+    }
+
+    #[test]
+    fn solve() {
+        let mut suduko = Standard::from_str(
+            "7 2 519  3 492 1      7 65 931      2    738 67 34  1949768 2 11   3         94 7",
+        )
+        .unwrap();
+        assert!(suduko.solve().is_ok());
+        assert_eq!(
+            suduko.to_string(),
+            "762851943354926178819473652931568724245197386678342519497685231126734895583219467"
+        );
     }
 }
