@@ -1,127 +1,7 @@
-//! The game of Suduko.
-//!
-//! Suduko is a grid-based logic game on a 9x9 grid. The goal of the game is to
-//! fill every 3x3 subgrid, row, and column with every number from 1-9 without
-//! any overlap. The game begins with some of the numbers revealed, and ends
-//! when all remaining cells in the grid have been filled out according to the
-//! games rules.
-
-use rustc_hash::FxHashSet;
+use crate::sudoku::{Cell, Sudoku};
 use std::fmt::Display;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
-
-/// The storage value for a cell on the Suduko grid.
-///
-/// For cells with set values, this is [`Some`]. If the cell is empty, this value
-/// is [`None`].
-pub type Cell = Option<u8>;
-
-/// A game of suduko.
-pub trait Suduko: Sized + Display {
-    /// Get the number on a cell on the grid.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `i` is not within the bounds of the suduko.
-    fn get(&self, i: usize) -> Cell;
-    /// Set the number on a cell on the grid, or clear it.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `i` is not within the bounds of the suduko or if `num` is not
-    /// one of [`Self::cell_values`].
-    fn set(&mut self, i: usize, num: Cell);
-    /// Get all the cells on the grid.
-    fn cells(&self) -> &[Cell];
-    /// Get a mutable refrence to all the cells on the grid.
-    fn cells_mut(&mut self) -> &mut [Cell];
-
-    /// Get all possible valid values for the cells.
-    fn cell_values(&mut self) -> RangeInclusive<u8>;
-
-    /// Get all the rows.
-    fn rows(&self) -> Vec<Vec<Cell>>;
-    /// Get all the columns.
-    fn columns(&self) -> Vec<Vec<Cell>>;
-    /// Get all the subgrids.
-    fn grids(&self) -> Vec<Vec<Cell>>;
-
-    /// Get all groups a cell is part of.
-    fn groups_of(&self, i: usize) -> Vec<Vec<Cell>>;
-
-    /// Get all cell groups.
-    ///
-    /// This includes [`Self::rows`], [`Self::columns`] and [`Self::grids`].
-    fn groups(&self) -> Vec<Vec<Cell>> {
-        let mut v = Vec::new();
-        v.append(&mut self.rows());
-        v.append(&mut self.columns());
-        v.append(&mut self.grids());
-        v
-    }
-
-    /// Check if all cells in the suduko has been filled.
-    fn filled(&self) -> bool {
-        self.cells().iter().all(|c| c.is_some())
-    }
-
-    /// Check if all currently set cells are legal.
-    fn legal(&self) -> bool {
-        let groups = self.groups();
-        groups.into_iter().all(|mut group| {
-            // Check that all cells in group that are set are unique.
-            group.sort();
-            group.windows(2).all(|w| w[0] != w[1] || w[0].is_none())
-        })
-    }
-
-    /// Check if the suduko has been solved.
-    fn solved(&self) -> bool {
-        let groups = self.groups();
-        groups.into_iter().all(|mut group| {
-            // Check that both all cells in group are set and that there are no
-            // repeating values.
-            group.sort();
-            group[0] != None && group.windows(2).all(|w| w[0] != w[1])
-        })
-    }
-
-    /// Solve the suduko
-    fn solve(&mut self) -> Result<(), &'static str> {
-        backtrack(self, 0)
-    }
-}
-
-fn backtrack(suduko: &mut impl Suduko, pos: usize) -> Result<(), &'static str> {
-    if !suduko.legal() {
-        return Err("cannot solve illegal position");
-    }
-
-    if pos >= suduko.cells().len() {
-        return Ok(());
-    }
-
-    if suduko.get(pos).is_some() {
-        return backtrack(suduko, pos + 1);
-    }
-
-    let illegal = FxHashSet::from_iter(suduko.groups_of(pos).into_iter().flatten());
-    let possible = suduko
-        .cell_values()
-        .filter(|&value| !illegal.contains(&Some(value)));
-
-    for value in possible {
-        suduko.set(pos, Some(value));
-        if let Ok(_) = backtrack(suduko, pos + 1) {
-            return Ok(());
-        }
-    }
-
-    suduko.set(pos, None);
-
-    Err("suduko cannot be solved")
-}
 
 /// Standard game of Suduko.
 ///
@@ -129,11 +9,11 @@ fn backtrack(suduko: &mut impl Suduko, pos: usize) -> Result<(), &'static str> {
 /// where the value of the cells have to be unique on the row and column, as
 /// well as in one of the nine 3x3 subgrids.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Standard {
+pub struct StandardSudoku {
     cells: [Cell; 9 * 9],
 }
 
-impl Standard {
+impl StandardSudoku {
     pub fn new() -> Self {
         Self {
             cells: [None; 9 * 9],
@@ -155,13 +35,13 @@ impl Standard {
     }
 }
 
-impl Default for Standard {
+impl Default for StandardSudoku {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Suduko for Standard {
+impl Sudoku for StandardSudoku {
     fn get(&self, i: usize) -> Cell {
         self.cells[i]
     }
@@ -228,7 +108,7 @@ impl Suduko for Standard {
     }
 }
 
-impl Display for Standard {
+impl Display for StandardSudoku {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(
             &self
@@ -243,7 +123,7 @@ impl Display for Standard {
     }
 }
 
-impl FromStr for Standard {
+impl FromStr for StandardSudoku {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -274,7 +154,7 @@ mod tests {
 
     #[test]
     fn standard_parse_str() {
-        let suduko = Standard::from_str(
+        let suduko = StandardSudoku::from_str(
             "   357891
 35    7  
       5  
@@ -293,7 +173,7 @@ mod tests {
         assert_eq!(suduko.get(3), Some(3));
         assert_eq!(suduko.get(10), Some(5));
 
-        let suduko = Standard::from_str(
+        let suduko = StandardSudoku::from_str(
             "   35789135    7        5    5 4     7 98  5   35 62 8  8    72   42 18  92 18   ",
         );
 
@@ -312,7 +192,7 @@ mod tests {
 
     #[test]
     fn groups() {
-        let suduko = Standard::from_str(
+        let suduko = StandardSudoku::from_str(
             "1234567892        3        4        5        6        7        8        987654321",
         )
         .unwrap();
@@ -360,42 +240,5 @@ mod tests {
                 Some(1),
             ])
         )
-    }
-
-    #[test]
-    fn validation() {
-        let suduko = Standard::from_str(
-            "827154396965327148341689752593468271472513689618972435786235914154796823239841567",
-        )
-        .unwrap();
-        assert!(suduko.filled());
-        assert!(suduko.solved());
-
-        let suduko = Standard::from_str(
-            "227154396965327148341689752593468271472513689618972435786235914154796823239841567",
-        )
-        .unwrap();
-        assert!(suduko.filled());
-        assert!(!suduko.solved());
-
-        let suduko = Standard::from_str(
-            " 27154396965327148341689752593468271472513689618972435786235914154796823239841567",
-        )
-        .unwrap();
-        assert!(!suduko.filled());
-        assert!(!suduko.solved());
-    }
-
-    #[test]
-    fn solve() {
-        let mut suduko = Standard::from_str(
-            "7 2 519  3 492 1      7 65 931      2    738 67 34  1949768 2 11   3         94 7",
-        )
-        .unwrap();
-        assert!(suduko.solve().is_ok());
-        assert_eq!(
-            suduko.to_string(),
-            "762851943354926178819473652931568724245197386678342519497685231126734895583219467"
-        );
     }
 }

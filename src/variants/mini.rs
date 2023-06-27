@@ -1,4 +1,4 @@
-use crate::suduko::{Cell, Suduko};
+use crate::sudoku::{Cell, Sudoku};
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -38,7 +38,7 @@ impl MiniSudoku {
     }
 }
 
-impl Suduko for MiniSudoku {
+impl Sudoku for MiniSudoku {
     fn get(&self, i: usize) -> Cell {
         self.cells[i]
     }

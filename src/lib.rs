@@ -1,4 +1,5 @@
-pub mod suduko;
+pub mod sudoku;
 pub mod variants;
 
-pub use suduko::*;
+pub use sudoku::*;
+pub use variants::StandardSudoku;
