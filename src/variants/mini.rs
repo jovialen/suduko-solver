@@ -2,12 +2,17 @@ use crate::sudoku::{Cell, Sudoku};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// Mini Sudoku.
+///
+/// A 6x6 grid with 3x2 sub-grids, which is otherwise played exactly the same
+/// as regular Sudoku with the digits from 1 to 6.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MiniSudoku {
     cells: [Cell; 6 * 6],
 }
 
 impl MiniSudoku {
+    /// Create a new mini Sudoku grid.
     pub fn new() -> Self {
         Self {
             cells: [None; 6 * 6],

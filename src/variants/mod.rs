@@ -1,3 +1,5 @@
+//! Implementations of different variants of Sudoku.
+
 mod mini;
 mod standard;
 mod hyper;

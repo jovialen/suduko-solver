@@ -14,6 +14,7 @@ pub struct StandardSudoku {
 }
 
 impl StandardSudoku {
+    /// Create an empty standard Sudoku grid.
     pub fn new() -> Self {
         Self {
             cells: [None; 9 * 9],

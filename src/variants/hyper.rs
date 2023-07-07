@@ -3,12 +3,17 @@ use std::fmt::Display;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
+/// Hyper Sudoku
+///
+/// Played on the same 9x9 grid as standard Sudoku with all the same rules, but
+/// with the addition of 4 extra 3x3 grids placed in the middle of the grid.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HyperSudoku {
     cells: [Cell; 9 * 9],
 }
 
 impl HyperSudoku {
+    /// Create a new hyper Sudoku grid.
     pub fn new() -> Self {
         Self {
             cells: [None; 9 * 9],
