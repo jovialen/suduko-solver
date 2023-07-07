@@ -92,32 +92,32 @@ pub trait Sudoku: Sized + Display {
     }
 }
 
-fn backtrack(suduko: &mut impl Sudoku, pos: usize) -> Result<(), &'static str> {
-    if !suduko.legal() {
+fn backtrack(sudoku: &mut impl Sudoku, pos: usize) -> Result<(), &'static str> {
+    if !sudoku.legal() {
         return Err("cannot solve illegal position");
     }
 
-    if pos >= suduko.cells().len() {
+    if pos >= sudoku.cells().len() {
         return Ok(());
     }
 
-    if suduko.get(pos).is_some() {
-        return backtrack(suduko, pos + 1);
+    if sudoku.get(pos).is_some() {
+        return backtrack(sudoku, pos + 1);
     }
 
-    let illegal = FxHashSet::from_iter(suduko.groups_of(pos).into_iter().flatten());
-    let possible = suduko
+    let illegal = FxHashSet::from_iter(sudoku.groups_of(pos).into_iter().flatten());
+    let possible = sudoku
         .cell_values()
         .filter(|&value| !illegal.contains(&Some(value)));
 
     for value in possible {
-        suduko.set(pos, Some(value));
-        if let Ok(_) = backtrack(suduko, pos + 1) {
+        sudoku.set(pos, Some(value));
+        if let Ok(_) = backtrack(sudoku, pos + 1) {
             return Ok(());
         }
     }
 
-    suduko.set(pos, None);
+    sudoku.set(pos, None);
 
     Err("suduko cannot be solved")
 }
